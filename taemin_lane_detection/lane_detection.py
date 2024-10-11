@@ -1,98 +1,74 @@
-import numpy as np
 import cv2
+import numpy as np
 
-def region_selection(image):
-    mask = np.zeros_like(image)
-    ignore_mask_color = 255
+src = np.float32([[200, 720], [590, 460], [700, 460], [1100, 720]])
+dst = np.float32([[300, 720], [300, 0], [900, 0], [900, 720]])
 
-    rows, cols = image.shape[:2]
-    bottom_left = [cols * 0.1, rows * 0.95]
-    top_left = [cols * 0.4, rows * 0.6]
-    bottom_right = [cols * 0.9, rows * 0.95]
-    top_right = [cols * 0.6, rows * 0.6]
-    vertices = np.array([[bottom_left, top_left, top_right, bottom_right]], dtype=np.int32)
+M = cv2.getPerspectiveTransform(src, dst)
+Minv = cv2.getPerspectiveTransform(dst, src)
 
-    cv2.fillPoly(mask, vertices, ignore_mask_color)
-    masked_image = cv2.bitwise_and(image, mask)
-    return masked_image
 
-# Hough Transform
-def hough_transform(image):
-    rho = 1
-    theta = np.pi / 180
-    threshold = 20
-    min_line_length = 20
-    max_line_gap = 300
-    return cv2.HoughLinesP(image, rho, theta, threshold, np.array([]), minLineLength=min_line_length, maxLineGap=max_line_gap)
-
-def draw_lane_lines(image, lines, color=[255, 0, 0], thickness=12):
-    line_image = np.zeros_like(image)
-    for line in lines:
-        if line is not None:
-            cv2.line(line_image, *line, color, thickness)
-    return cv2.addWeighted(image, 1.0, line_image, 1.0, 0.0)
-
-def lane_lines(image, lines):
-    left_lines = []
-    right_lines = []
-    left_weights = []
-    right_weights = []
+def draw_lines(img, lines):
+    img = np.copy(img)
+    blank_image = np.zeros((img.shape[0], img.shape[1], 3), dtype=np.uint8)
 
     for line in lines:
         for x1, y1, x2, y2 in line:
-            if x1 == x2:
-                continue
-            slope = (y2 - y1) / (x2 - x1)
-            if slope < 0:
-                left_lines.append((slope, y1 - slope * x1))
-                left_weights.append(np.sqrt((y2 - y1) ** 2 + (x2 - x1) ** 2))
-            else:
-                right_lines.append((slope, y1 - slope * x1))
-                right_weights.append(np.sqrt((y2 - y1) ** 2 + (x2 - x1) ** 2))
+            cv2.line(blank_image,
+ (x1, y1), (x2, y2), (0, 255, 0), thickness=10)
 
-    left_line = np.dot(left_weights, left_lines) / np.sum(left_weights) if len(left_weights) > 0 else None
-    right_line = np.dot(right_weights, right_lines) / np.sum(right_weights) if len(right_weights) > 0 else None
 
-    y1 = image.shape[0]
-    y2 = int(y1 * 0.6)
+    return cv2.addWeighted(img, 0.8, blank_image, 1, 0.0)
 
-    left_lane = None if left_line is None else ((int((y1 - left_line[1]) / left_line[0]), y1),
-                                               (int((y2 - left_line[1]) / left_line[0]), y2))
-    right_lane = None if right_line is None else ((int((y1 - right_line[1]) / right_line[0]), y1),
-                                                 (int((y2 - right_line[1]) / right_line[0]), y2))
+import cv2
+import numpy as np
 
-    return left_lane, right_lane
+def process_image(image):
 
-def frame_processor(image):
-    grayscale = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    blur = cv2.GaussianBlur(grayscale, (5, 5), 0)
-    edges = cv2.Canny(blur, 50, 150)
-    region = region_selection(edges)
-    hough = hough_transform(region)
-    return draw_lane_lines(image, lane_lines(image, hough))
+    # grayscale and blur
+    gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
+    blur = cv2.GaussianBlur(gray, (5, 5), 0)
 
-def main():
-    cap = cv2.VideoCapture(0)
+    # Canny Edge Detection
+    canny = cv2.Canny(blur, 50, 150)
 
-    if not cap.isOpened():
-        print("Error: Could not open camera.")
-        return
+    # ROI
+    imshape = image.shape
+    vertices = np.array([[ (0,imshape[0]),(450, 290), (490, 290), (imshape[1],imshape[0])]], dtype=np.int32)
+    masked_edges = region_of_interest(canny, vertices)
 
-    while cap.isOpened():
-        ret, frame = cap.read()
-        if not ret:
-            print("Error: Could not read frame.")
-            break
+    # Hough 변환
+    lines = cv2.HoughLinesP(masked_edges, 2, np.pi/180, 100, np.array([]), minLineLength=40, maxLineGap=5)
 
-        lane_image = frame_processor(frame)
+    line_image = np.zeros_like(image)
+    if lines is not None:
+        for line in lines:
+            for x1, y1, x2, y2 in line:
+                cv2.line(line_image, (x1, y1), (x2, y2), (0, 255, 0), 2)
 
-        cv2.imshow("Lane Detection", lane_image)
+    # merge image and line image
+    result = cv2.addWeighted(image, 0.8, line_image, 1, 0.0)
 
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            break
+    return result
 
-    cap.release()
-    cv2.destroyAllWindows()
+def region_of_interest(img, vertices):
+    mask = np.zeros_like(img)
+    #channel_count = img.shape[2]
+    match_mask_color = 255
+    cv2.fillPoly(mask, vertices, match_mask_color)
+    masked_image = cv2.bitwise_and(img, mask)
+    return masked_image
 
-if __name__ == "__main__":
-    main()
+cap = cv2.VideoCapture(0)
+
+while(True):
+    ret, frame = cap.read()
+
+    result = process_image(frame)
+
+    cv2.imshow('frame', result)
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        break
+
+cap.release()
+cv2.destroyAllWindows()
