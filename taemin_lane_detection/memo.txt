@@ -1,0 +1,7 @@
+Home - taemin_lane_detection 폴더에서 진행
+vscode환경 그대로 사용 -
+ 
+numpy, opencv 삭제
+sudo apt-get remove python3-opencv
+pip3 uninstall numpy
+
