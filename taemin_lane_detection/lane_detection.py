@@ -5,7 +5,7 @@ src = np.float32([[200, 720], [590, 460], [700, 460], [1100, 720]])
 dst = np.float32([[300, 720], [300, 0], [900, 0], [900, 720]])
 
 M = cv2.getPerspectiveTransform(src, dst)
-Minv = cv2.getPerspectiveTransform(dst, src)
+# Minv = cv2.getPerspectiveTransform(dst, src)
 
 
 def draw_lines(img, lines):
