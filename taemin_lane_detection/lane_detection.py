@@ -20,9 +20,6 @@ def draw_lines(img, lines):
 
     return cv2.addWeighted(img, 0.8, blank_image, 1, 0.0)
 
-import cv2
-import numpy as np
-
 def process_image(image):
 
     # grayscale and blur
