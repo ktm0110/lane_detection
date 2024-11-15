@@ -9,7 +9,7 @@ from copy import deepcopy
 import sys
 sys.path.append('../')
 
-from utils import set_save_files, save_dir, ensure_dir, get_save_files
+from taemin_lane_detection.utils import set_save_files, save_dir, ensure_dir, get_save_files
 
 perspective_correction = None
 perspective_correction_inv = None
