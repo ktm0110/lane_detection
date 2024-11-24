@@ -7,9 +7,9 @@ import matplotlib.pyplot as plt
 from copy import deepcopy
 
 import sys
-sys.path.append('../')
+sys.path.append('../../')
 
-from taemin_lane_detection.utils import set_save_files, save_dir, ensure_dir, get_save_files
+from taemin_lane_detection.lane_detection_project.utils import set_save_files, save_dir, ensure_dir, get_save_files
 
 perspective_correction = None
 perspective_correction_inv = None
