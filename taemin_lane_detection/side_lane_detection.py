@@ -71,7 +71,6 @@ class MultiLaneDetector:
 
     def find_peaks(self, histogram, threshold=1000, distance=100):
         """
-        히스토그램의 피크를 찾아 반환.
         :param histogram: 히스토그램 배열
         :param threshold: 피크로 간주할 최소 값
         :param distance: 피크 간 최소 거리
